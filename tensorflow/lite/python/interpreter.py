@@ -457,7 +457,12 @@ class Interpreter:
     if experimental_preserve_all_tensors and (
         experimental_op_resolver_type == OpResolverType.AUTO or
         experimental_op_resolver_type == OpResolverType.BUILTIN):
-      actual_resolver_type = OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
+      warnings.warn(
+          'Warning: Enabling `experimental_preserve_all_tensors` with the'
+          ' BUILTIN or AUTO op resolver can significantly increase memory'
+          ' usage. This is because all intermediate tensors will be stored. If'
+          ' you encounter memory problems, consider disabling this option.'
+      )
     op_resolver_id = _get_op_resolver_id(actual_resolver_type)
     if op_resolver_id is None:
       raise ValueError('Unrecognized passed in op resolver type: {}'.format(
