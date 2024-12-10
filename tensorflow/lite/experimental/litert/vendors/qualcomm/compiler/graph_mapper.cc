@@ -38,7 +38,7 @@
 namespace litert::qnn {
 
 // Get empty configurations for graph building.
-inline absl::Span<const QnnGraph_Config_t*> GetDefaultGraphConfigs() {
+inline absl::Span<const QnnGraph_Config_t*> GetFp32GraphConfigs() {
   static QnnHtpGraph_CustomConfig_t htp_graph_config =
       QNN_HTP_GRAPH_CUSTOM_CONFIG_INIT;
   htp_graph_config.option = QNN_HTP_GRAPH_CONFIG_OPTION_PRECISION;
@@ -50,6 +50,29 @@ inline absl::Span<const QnnGraph_Config_t*> GetDefaultGraphConfigs() {
 
   static const QnnGraph_Config_t* configs[2] = {&graph_config, nullptr};
   return absl::MakeSpan(configs);
+}
+
+inline absl::Span<const QnnGraph_Config_t*> GetDefaultGraphConfigs() {
+  static const QnnGraph_Config_t* configs[] = {nullptr};
+  return absl::MakeSpan(configs);
+}
+
+absl::Span<const QnnGraph_Config_t*> GraphMapper::PickGraphConfigHeuristic() {
+  for (const auto& input : subgraph_.Inputs()) {
+    if (static_cast<LiteRtElementType>(
+            input.RankedTensorType().ElementType()) ==
+        kLiteRtElementTypeFloat32) {
+      return GetFp32GraphConfigs();
+    }
+  }
+  for (const auto& output : subgraph_.Outputs()) {
+    if (static_cast<LiteRtElementType>(
+            output.RankedTensorType().ElementType()) ==
+        kLiteRtElementTypeFloat32) {
+      return GetFp32GraphConfigs();
+    }
+  }
+  return GetDefaultGraphConfigs();
 }
 
 LiteRtStatus GraphMapper::AssignTensorName(Qnn_Tensor_t& qnn_tensor) {
@@ -129,7 +152,7 @@ LiteRtStatus GraphMapper::IsLiteRtSubgraphSupported() {
 LiteRtStatus GraphMapper::InitQnnGraph(absl::string_view qnn_graph_name) {
   LITERT_RETURN_STATUS_IF_QNN_NOT_OK(
       qnn_.Api()->graphCreate(context_handle_, qnn_graph_name.data(),
-                              GetDefaultGraphConfigs().data(), &QnnGraph()));
+                              PickGraphConfigHeuristic().data(), &QnnGraph()));
   return kLiteRtStatusOk;
 }
 
