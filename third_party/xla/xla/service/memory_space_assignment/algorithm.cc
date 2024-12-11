@@ -2982,8 +2982,8 @@ bool AsynchronousCopyResource::ConsumeResource(
         // that was freed when removing the copy.
         float old_resource =
             std::max(0.0f, initial_resources_[time] - delay_[time]);
-        if (delay_change_map && !delay_change_map->contains(time)) {
-          (*delay_change_map)[time] = delay_[time];
+        if (delay_change_map) {
+          delay_change_map->emplace(time, delay_[time]);
         }
         delay_[time] = std::max(0.0f, resource - resource_to_free);
         float new_resource =
@@ -4669,19 +4669,15 @@ bool MsaAlgorithm::ViolatesMaximumOutstandingAsyncCopies(
 
   // Count the prefetches/evictions in the interval tree for the given interval.
   if (is_prefetch) {
-    int64_t num_prefetches =
-        prefetch_interval_tree_
-            .ChunksOverlappingInTime(inclusive_start_time, end_time)
-            .size() +
-        num_additional_copies;
+    int64_t num_prefetches = prefetch_interval_tree_.NumChunksOverlappingInTime(
+                                 inclusive_start_time, end_time) +
+                             num_additional_copies;
     return num_prefetches >=
            options_.max_outstanding_prefetches + extra_async_copy_limit;
   } else {
-    int64_t num_evictions =
-        eviction_interval_tree_
-            .ChunksOverlappingInTime(inclusive_start_time, end_time)
-            .size() +
-        num_additional_copies;
+    int64_t num_evictions = eviction_interval_tree_.NumChunksOverlappingInTime(
+                                inclusive_start_time, end_time) +
+                            num_additional_copies;
     return num_evictions >=
            options_.max_outstanding_evictions + extra_async_copy_limit;
   }
